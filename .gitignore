@@ -1,1 +1,6 @@
 .vscode
+*.gch
+*.out
+*.uasm
+*.txt
+*.zip
