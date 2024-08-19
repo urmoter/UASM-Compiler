@@ -322,6 +322,7 @@ unsigned char* token_word_to_mc(d8_token* tokens, char** words) {
                         }
                     }
                 } else if (!strcmp(word, "STR")) { // MEMORY
+                    RAM[addr++] = 0x06;
                     if (tokens[++i] != REGISTER) {
                         fprintf(stdout, "STR NEEDS A REGISTER TO COPY FROM\n");
                         return NULL;
@@ -361,6 +362,7 @@ unsigned char* token_word_to_mc(d8_token* tokens, char** words) {
                     RAM[addr++] = LSB;
                     RAM[addr++] = MSB;
                 } else if (!strcmp(word, "LDR")) {
+                    RAM[addr++] = 0x07;
                     if (tokens[++i] != ADDRESS) {
                         fprintf(stdout, "STR NEEDS AN ADDRESS TO COPY TO\n");
                         return NULL;
@@ -703,9 +705,657 @@ unsigned char* token_word_to_mc(d8_token* tokens, char** words) {
                             return NULL;
                         }
                     }
-                } /* ... */ else if(!strcmp(word, "HLT")) {
+                } else if (!strcmp(word, "FLP")) {
+                    RAM[addr++] = 0x0F;
+                    if (tokens[++i] != REGISTER) {
+                        fprintf(stdout, "NEG NEEDS A REGISTER\n");
+                    }
+                    switch (words[i][1]) {
+                        case 'A': {
+                            RAM[addr++] = 0x00;
+                            break;
+                        }
+                        case 'B': {
+                            RAM[addr++] = 0x01;
+                            break;
+                        }
+                        case 'C': {
+                            RAM[addr++] = 0x02;
+                            break;
+                        }
+                        case 'D': {
+                            RAM[addr++] = 0x03;
+                            break;
+                        }
+
+                        default: {
+                            fprintf(stdout, "%d is not a valid register\n", word[i]);
+                            return NULL;
+                        }
+                    }
+                } else if (!strcmp(word, "PSHI")) { // STACK
+                    RAM[addr++] = 0x10;
+                    // Correct value?
+                    // If not, stop.
+                    if (tokens[++i] != IMMEDIATE) {
+                        fprintf(stdout, "PSHI NEEDS AN IMMEDIATE VALUE\n");
+                        return NULL;
+                    }
+                    // If so, keep going.
+                    RAM[addr++] = str_to_byte(words[i] + 1);
+                } else if (!strcmp(word, "PSHR")) {
+                    RAM[addr++] = 0x11;
+                    if (tokens[++i] != REGISTER) {
+                        fprintf(stdout, "PSHR NEEDS A REGISTER\n");
+                    }
+                    switch (words[i][1]) {
+                        case 'A': {
+                            RAM[addr++] = 0x00;
+                            break;
+                        }
+                        case 'B': {
+                            RAM[addr++] = 0x01;
+                            break;
+                        }
+                        case 'C': {
+                            RAM[addr++] = 0x02;
+                            break;
+                        }
+                        case 'D': {
+                            RAM[addr++] = 0x03;
+                            break;
+                        }
+
+                        default: {
+                            fprintf(stdout, "%d is not a valid register\n", word[i]);
+                            return NULL;
+                        }
+                    }
+                } else if (!strcmp(word, "POP")) {
+                    RAM[addr++] = 0x12;
+                    if (tokens[++i] != REGISTER) {
+                        fprintf(stdout, "POP NEEDS A REGISTER\n");
+                    }
+                    switch (words[i][1]) {
+                        case 'A': {
+                            RAM[addr++] = 0x00;
+                            break;
+                        }
+                        case 'B': {
+                            RAM[addr++] = 0x01;
+                            break;
+                        }
+                        case 'C': {
+                            RAM[addr++] = 0x02;
+                            break;
+                        }
+                        case 'D': {
+                            RAM[addr++] = 0x03;
+                            break;
+                        }
+
+                        default: {
+                            fprintf(stdout, "%d is not a valid register\n", word[i]);
+                            return NULL;
+                        }
+                    }
+                } else if (!strcmp(word, "JMP")) { // JUMPING
+                    RAM[addr++] = 0x13;
+                    if (tokens[++i] != ADDRESS) {
+                        fprintf(stdout, "JMP NEEDS AN ADDRESS TO JUMP TO\n");
+                        return NULL;
+                    }
+
+                    unsigned short address = str_to_addr((words[i] + 1));
+                    unsigned char MSB = address >> 8;
+                    unsigned char LSB = address;
+                    RAM[addr++] = LSB;
+                    RAM[addr++] = MSB;
+                } else if (!strcmp(word, "CALL")) {
+                    RAM[addr++] = 0x14;
+                    if (tokens[++i] != ADDRESS) {
+                        fprintf(stdout, "CALL NEEDS AN ADDRESS TO CALL\n");
+                        return NULL;
+                    }
+
+                    unsigned short address = str_to_addr((words[i] + 1));
+                    unsigned char MSB = address >> 8;
+                    unsigned char LSB = address;
+                    RAM[addr++] = LSB;
+                    RAM[addr++] = MSB;
+                } else if (!strcmp(word, "RET")) {
+                    RAM[addr++] = 0x15;
+                } else if (!strcmp(word, "JZ")) {
+                    RAM[addr++] = 0x16;
+                    if (tokens[++i] != ADDRESS) {
+                        fprintf(stdout, "JZ NEEDS AN ADDRESS TO JUMP TO\n");
+                        return NULL;
+                    }
+
+                    unsigned short address = str_to_addr((words[i] + 1));
+                    unsigned char MSB = address >> 8;
+                    unsigned char LSB = address;
+                    RAM[addr++] = LSB;
+                    RAM[addr++] = MSB;
+                } else if (!strcmp(word, "JNZ")) {
+                    RAM[addr++] = 0x17;
+                    if (tokens[++i] != ADDRESS) {
+                        fprintf(stdout, "JNZ NEEDS AN ADDRESS TO JUMP TO\n");
+                        return NULL;
+                    }
+
+                    unsigned short address = str_to_addr((words[i] + 1));
+                    unsigned char MSB = address >> 8;
+                    unsigned char LSB = address;
+                    RAM[addr++] = LSB;
+                    RAM[addr++] = MSB;
+                } else if (!strcmp(word, "HLT")) {
                     RAM[addr++] = 0x18;
-                } /* ... */ else if (!strcmp(word, "JL")) {
+                } else if (!strcmp(word, "JO")) { // OVERFLOW
+                    RAM[addr++] = 0x19;
+                    if (tokens[++i] != ADDRESS) {
+                        fprintf(stdout, "JO NEEDS AN ADDRESS TO JUMP TO\n");
+                        return NULL;
+                    }
+
+                    unsigned short address = str_to_addr((words[i] + 1));
+                    unsigned char MSB = address >> 8;
+                    unsigned char LSB = address;
+                    RAM[addr++] = LSB;
+                    RAM[addr++] = MSB;
+                } else if (!strcmp(word, "JNO")) {
+                    RAM[addr++] = 0x1A;
+                    if (tokens[++i] != ADDRESS) {
+                        fprintf(stdout, "JNO NEEDS AN ADDRESS TO JUMP TO\n");
+                        return NULL;
+                    }
+
+                    unsigned short address = str_to_addr((words[i] + 1));
+                    unsigned char MSB = address >> 8;
+                    unsigned char LSB = address;
+                    RAM[addr++] = LSB;
+                    RAM[addr++] = MSB;
+                } else if (!strcmp(word, "SETO")) { // STATUS
+                    RAM[addr++] = 0x1B;
+                } else if (!strcmp(word, "CLRO")) {
+                    RAM[addr++] = 0x1C;
+                } else if (!strcmp(word, "SETZ")) {
+                    RAM[addr++] = 0x1D;
+                } else if (!strcmp(word, "CLRZ")) {
+                    RAM[addr++] = 0x1E;
+                } else if (!strcmp(word, "SETN")) {
+                    RAM[addr++] = 0x1F;
+                } else if (!strcmp(word, "CLRN")) {
+                    RAM[addr++] = 0x20;
+                } else if (!strcmp(word, "SETP")) {
+                    RAM[addr++] = 0x21;
+                } else if (!strcmp(word, "CLRP")) {
+                    RAM[addr++] = 0x22;
+                } else if (!strcmp(word, "SETC")) {
+                    RAM[addr++] = 0x23;
+                } else if (!strcmp(word, "CLRC")) {
+                    RAM[addr++] = 0x24;
+                } else if (!strcmp(word, "AND")) { // LOGIC
+                    RAM[addr++] = 0x25;
+                    if (tokens[++i] != REGISTER) {
+                        fprintf(stdout, "AND NEEDS TWO REGISTERS\n");
+                    }
+                    switch (words[i][1]) {
+                        case 'A': {
+                            RAM[addr++] = 0x00;
+                            break;
+                        }
+                        case 'B': {
+                            RAM[addr++] = 0x01;
+                            break;
+                        }
+                        case 'C': {
+                            RAM[addr++] = 0x02;
+                            break;
+                        }
+                        case 'D': {
+                            RAM[addr++] = 0x03;
+                            break;
+                        }
+
+                        default: {
+                            fprintf(stdout, "%d is not a valid register\n", word[i]);
+                            return NULL;
+                        }
+                    }
+                    
+                    if (tokens[++i] != REGISTER) {
+                        fprintf(stdout, "AND NEEDS TWO REGISTERS\n");
+                    }
+                    switch (words[i][1]) {
+                        case 'A': {
+                            RAM[addr++] = 0x00;
+                            break;
+                        }
+                        case 'B': {
+                            RAM[addr++] = 0x01;
+                            break;
+                        }
+                        case 'C': {
+                            RAM[addr++] = 0x02;
+                            break;
+                        }
+                        case 'D': {
+                            RAM[addr++] = 0x03;
+                            break;
+                        }
+
+                        default: {
+                            fprintf(stdout, "%d is not a valid register\n", word[i]);
+                            return NULL;
+                        }
+                    }
+                } else if (!strcmp(word, "OR")) {
+                    RAM[addr++] = 0x26;
+                    if (tokens[++i] != REGISTER) {
+                        fprintf(stdout, "OR NEEDS TWO REGISTERS\n");
+                    }
+                    switch (words[i][1]) {
+                        case 'A': {
+                            RAM[addr++] = 0x00;
+                            break;
+                        }
+                        case 'B': {
+                            RAM[addr++] = 0x01;
+                            break;
+                        }
+                        case 'C': {
+                            RAM[addr++] = 0x02;
+                            break;
+                        }
+                        case 'D': {
+                            RAM[addr++] = 0x03;
+                            break;
+                        }
+
+                        default: {
+                            fprintf(stdout, "%d is not a valid register\n", word[i]);
+                            return NULL;
+                        }
+                    }
+                    
+                    if (tokens[++i] != REGISTER) {
+                        fprintf(stdout, "OR NEEDS TWO REGISTERS\n");
+                    }
+                    switch (words[i][1]) {
+                        case 'A': {
+                            RAM[addr++] = 0x00;
+                            break;
+                        }
+                        case 'B': {
+                            RAM[addr++] = 0x01;
+                            break;
+                        }
+                        case 'C': {
+                            RAM[addr++] = 0x02;
+                            break;
+                        }
+                        case 'D': {
+                            RAM[addr++] = 0x03;
+                            break;
+                        }
+
+                        default: {
+                            fprintf(stdout, "%d is not a valid register\n", word[i]);
+                            return NULL;
+                        }
+                    }
+                } else if (!strcmp(word, "XOR")) {
+                    RAM[addr++] = 0x27;
+                    if (tokens[++i] != REGISTER) {
+                        fprintf(stdout, "XOR NEEDS TWO REGISTERS\n");
+                    }
+                    switch (words[i][1]) {
+                        case 'A': {
+                            RAM[addr++] = 0x00;
+                            break;
+                        }
+                        case 'B': {
+                            RAM[addr++] = 0x01;
+                            break;
+                        }
+                        case 'C': {
+                            RAM[addr++] = 0x02;
+                            break;
+                        }
+                        case 'D': {
+                            RAM[addr++] = 0x03;
+                            break;
+                        }
+
+                        default: {
+                            fprintf(stdout, "%d is not a valid register\n", word[i]);
+                            return NULL;
+                        }
+                    }
+                    
+                    if (tokens[++i] != REGISTER) {
+                        fprintf(stdout, "XOR NEEDS TWO REGISTERS\n");
+                    }
+                    switch (words[i][1]) {
+                        case 'A': {
+                            RAM[addr++] = 0x00;
+                            break;
+                        }
+                        case 'B': {
+                            RAM[addr++] = 0x01;
+                            break;
+                        }
+                        case 'C': {
+                            RAM[addr++] = 0x02;
+                            break;
+                        }
+                        case 'D': {
+                            RAM[addr++] = 0x03;
+                            break;
+                        }
+
+                        default: {
+                            fprintf(stdout, "%d is not a valid register\n", word[i]);
+                            return NULL;
+                        }
+                    }
+                } else if (!strcmp(word, "NOT")) {
+                    RAM[addr++] = 0x28;
+                    if (tokens[++i] != REGISTER) {
+                        fprintf(stdout, "NOT NEEDS A REGISTER\n");
+                    }
+                    switch (words[i][1]) {
+                        case 'A': {
+                            RAM[addr++] = 0x00;
+                            break;
+                        }
+                        case 'B': {
+                            RAM[addr++] = 0x01;
+                            break;
+                        }
+                        case 'C': {
+                            RAM[addr++] = 0x02;
+                            break;
+                        }
+                        case 'D': {
+                            RAM[addr++] = 0x03;
+                            break;
+                        }
+
+                        default: {
+                            fprintf(stdout, "%d is not a valid register\n", word[i]);
+                            return NULL;
+                        }
+                    }
+                } else if (!strcmp(word, "JE")) { // EQUAL
+                    RAM[addr++] = 0x29;
+                    if ((tokens[++i] != ADDRESS) && (tokens[i] != LABEL)) {
+                        fprintf(stdout, "JE NEEDS AN ADDRESS TO JUMP TO\n");
+                        return NULL;
+                    }
+                    if (tokens[i] == LABEL) {
+                        int len = sizeof(label_names)/sizeof(label_names[0]);
+                        int present = 0;
+                        int j;
+                        for (j = 0; j < len; j++) {
+                            if(!strcmp(label_names[j], words[i])) {
+                                present = 1;
+                                break;
+                            }
+                        }
+                        if (!present) {
+                            fprintf(stdout, "JE NEEDS A VALID LABEL\n");
+                            return NULL;
+                        }
+
+                        unsigned short address = label_addresses[j];
+                        unsigned char MSB = address >> 8;
+                        unsigned char LSB = address;
+                        RAM[addr++] = LSB;
+                        RAM[addr++] = MSB;
+                        
+                    } else {
+                        unsigned short address = str_to_addr((words[i] + 1));
+                        unsigned char MSB = address >> 8;
+                        unsigned char LSB = address;
+                        RAM[addr++] = LSB;
+                        RAM[addr++] = MSB;
+                    }
+
+                    if (tokens[++i] != REGISTER) {
+                        fprintf(stdout, "JE NEEDS TWO REGISTERS TO COMPARE\n");
+                        return NULL;
+                    }
+                    switch (words[i][1]) {
+                        case 'A': {
+                            RAM[addr++] = 0x00;
+                            break;
+                        }
+                        case 'B': {
+                            RAM[addr++] = 0x01;
+                            break;
+                        }
+                        case 'C': {
+                            RAM[addr++] = 0x02;
+                            break;
+                        }
+                        case 'D': {
+                            RAM[addr++] = 0x03;
+                            break;
+                        }
+
+                        default: {
+                            fprintf(stdout, "%d is not a valid register\n", word[i]);
+                            return NULL;
+                        }
+                    }
+                    if (tokens[++i] != REGISTER) {
+                        fprintf(stdout, "JE NEEDS TWO REGISTERS TO COMPARE\n");
+                        return NULL;
+                    }
+                    switch (words[i][1]) {
+                        case 'A': {
+                            RAM[addr++] = 0x00;
+                            break;
+                        }
+                        case 'B': {
+                            RAM[addr++] = 0x01;
+                            break;
+                        }
+                        case 'C': {
+                            RAM[addr++] = 0x02;
+                            break;
+                        }
+                        case 'D': {
+                            RAM[addr++] = 0x03;
+                            break;
+                        }
+
+                        default: {
+                            fprintf(stdout, "%d is not a valid register\n", word[i]);
+                            return NULL;
+                        }
+                    }
+                } else if (!strcmp(word, "JNE")) {
+                    RAM[addr++] = 0x2A;
+                    if ((tokens[++i] != ADDRESS) && (tokens[i] != LABEL)) {
+                        fprintf(stdout, "JNE NEEDS AN ADDRESS TO JUMP TO\n");
+                        return NULL;
+                    }
+                    if (tokens[i] == LABEL) {
+                        int len = sizeof(label_names)/sizeof(label_names[0]);
+                        int present = 0;
+                        int j;
+                        for (j = 0; j < len; j++) {
+                            if(!strcmp(label_names[j], words[i])) {
+                                present = 1;
+                                break;
+                            }
+                        }
+                        if (!present) {
+                            fprintf(stdout, "JNE NEEDS A VALID LABEL\n");
+                            return NULL;
+                        }
+
+                        unsigned short address = label_addresses[j];
+                        unsigned char MSB = address >> 8;
+                        unsigned char LSB = address;
+                        RAM[addr++] = LSB;
+                        RAM[addr++] = MSB;
+                        
+                    } else {
+                        unsigned short address = str_to_addr((words[i] + 1));
+                        unsigned char MSB = address >> 8;
+                        unsigned char LSB = address;
+                        RAM[addr++] = LSB;
+                        RAM[addr++] = MSB;
+                    }
+
+                    if (tokens[++i] != REGISTER) {
+                        fprintf(stdout, "JNE NEEDS TWO REGISTERS TO COMPARE\n");
+                        return NULL;
+                    }
+                    switch (words[i][1]) {
+                        case 'A': {
+                            RAM[addr++] = 0x00;
+                            break;
+                        }
+                        case 'B': {
+                            RAM[addr++] = 0x01;
+                            break;
+                        }
+                        case 'C': {
+                            RAM[addr++] = 0x02;
+                            break;
+                        }
+                        case 'D': {
+                            RAM[addr++] = 0x03;
+                            break;
+                        }
+
+                        default: {
+                            fprintf(stdout, "%d is not a valid register\n", word[i]);
+                            return NULL;
+                        }
+                    }
+                    if (tokens[++i] != REGISTER) {
+                        fprintf(stdout, "JL NEEDS TWO REGISTERS TO COMPARE\n");
+                        return NULL;
+                    }
+                    switch (words[i][1]) {
+                        case 'A': {
+                            RAM[addr++] = 0x00;
+                            break;
+                        }
+                        case 'B': {
+                            RAM[addr++] = 0x01;
+                            break;
+                        }
+                        case 'C': {
+                            RAM[addr++] = 0x02;
+                            break;
+                        }
+                        case 'D': {
+                            RAM[addr++] = 0x03;
+                            break;
+                        }
+
+                        default: {
+                            fprintf(stdout, "%d is not a valid register\n", word[i]);
+                            return NULL;
+                        }
+                    }
+                } else if (!strcmp(word, "JG")) { // INEQUALITY
+                    RAM[addr++] = 0x2B;
+                    if ((tokens[++i] != ADDRESS) && (tokens[i] != LABEL)) {
+                        fprintf(stdout, "JG NEEDS AN ADDRESS TO JUMP TO\n");
+                        return NULL;
+                    }
+                    if (tokens[i] == LABEL) {
+                        int len = sizeof(label_names)/sizeof(label_names[0]);
+                        int present = 0;
+                        int j;
+                        for (j = 0; j < len; j++) {
+                            if(!strcmp(label_names[j], words[i])) {
+                                present = 1;
+                                break;
+                            }
+                        }
+                        if (!present) {
+                            fprintf(stdout, "JG NEEDS A VALID LABEL\n");
+                            return NULL;
+                        }
+
+                        unsigned short address = label_addresses[j];
+                        unsigned char MSB = address >> 8;
+                        unsigned char LSB = address;
+                        RAM[addr++] = LSB;
+                        RAM[addr++] = MSB;
+                        
+                    } else {
+                        unsigned short address = str_to_addr((words[i] + 1));
+                        unsigned char MSB = address >> 8;
+                        unsigned char LSB = address;
+                        RAM[addr++] = LSB;
+                        RAM[addr++] = MSB;
+                    }
+
+                    if (tokens[++i] != REGISTER) {
+                        fprintf(stdout, "JG NEEDS TWO REGISTERS TO COMPARE\n");
+                        return NULL;
+                    }
+                    switch (words[i][1]) {
+                        case 'A': {
+                            RAM[addr++] = 0x00;
+                            break;
+                        }
+                        case 'B': {
+                            RAM[addr++] = 0x01;
+                            break;
+                        }
+                        case 'C': {
+                            RAM[addr++] = 0x02;
+                            break;
+                        }
+                        case 'D': {
+                            RAM[addr++] = 0x03;
+                            break;
+                        }
+
+                        default: {
+                            fprintf(stdout, "%d is not a valid register\n", word[i]);
+                            return NULL;
+                        }
+                    }
+                    if (tokens[++i] != REGISTER) {
+                        fprintf(stdout, "JL NEEDS TWO REGISTERS TO COMPARE\n");
+                        return NULL;
+                    }
+                    switch (words[i][1]) {
+                        case 'A': {
+                            RAM[addr++] = 0x00;
+                            break;
+                        }
+                        case 'B': {
+                            RAM[addr++] = 0x01;
+                            break;
+                        }
+                        case 'C': {
+                            RAM[addr++] = 0x02;
+                            break;
+                        }
+                        case 'D': {
+                            RAM[addr++] = 0x03;
+                            break;
+                        }
+
+                        default: {
+                            fprintf(stdout, "%d is not a valid register\n", word[i]);
+                            return NULL;
+                        }
+                    }
+                } else if (!strcmp(word, "JL")) {
                     RAM[addr++] = 0x2C;
                     if ((tokens[++i] != ADDRESS) && (tokens[i] != LABEL)) {
                         fprintf(stdout, "JL NEEDS AN ADDRESS TO JUMP TO\n");
@@ -794,6 +1444,46 @@ unsigned char* token_word_to_mc(d8_token* tokens, char** words) {
                             return NULL;
                         }
                     }
+                } else if (!strcmp(word, "PRNI")) { // PRINTING
+                    RAM[addr++] = 0x2D;
+                    // Correct value?
+                    // If not, stop.
+                    if (tokens[++i] != IMMEDIATE) {
+                        fprintf(stdout, "PRNI NEEDS AN IMMEDIATE VALUE\n");
+                        return NULL;
+                    }
+                    // If so, keep going.
+                    RAM[addr++] = str_to_byte(words[i] + 1);
+                } else if (!strcmp(word, "PRNR")) {
+                    RAM[addr++] = 0x2E;
+                    if (tokens[++i] != REGISTER) {
+                        fprintf(stdout, "PRNR NEEDS A REGISTER\n");
+                    }
+                    switch (words[i][1]) {
+                        case 'A': {
+                            RAM[addr++] = 0x00;
+                            break;
+                        }
+                        case 'B': {
+                            RAM[addr++] = 0x01;
+                            break;
+                        }
+                        case 'C': {
+                            RAM[addr++] = 0x02;
+                            break;
+                        }
+                        case 'D': {
+                            RAM[addr++] = 0x03;
+                            break;
+                        }
+
+                        default: {
+                            fprintf(stdout, "%d is not a valid register\n", word[i]);
+                            return NULL;
+                        }
+                    }
+                } else if (!strcmp(word, "ENPR")) {
+                    RAM[addr++] = 0x2F;
                 } else {
                     fprintf(stdout, "INVALID OPCODE: %s\n", word);
                 }

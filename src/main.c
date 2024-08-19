@@ -15,7 +15,7 @@ int main(int argc, char const *argv[]) {
         file_words[i] = calloc(10, 1);
         tokens[i] = 0;
     }
-    if (argc == 3) {
+    if (argc != 4) {
         fprintf(stdout, "NOT ENOUGH ARGS!\n");
         return -1;
     }
