@@ -4,7 +4,7 @@
 *.uasm
 *.txt
 *.zip
-
+.DS_Store
 
 # Added by cargo
 
