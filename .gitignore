@@ -4,3 +4,8 @@
 *.uasm
 *.txt
 *.zip
+
+
+# Added by cargo
+
+/target
