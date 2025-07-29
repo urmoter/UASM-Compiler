@@ -10,7 +10,9 @@ pub enum TokenTag {
     LabelCreator,
     Register,
     DSetLocation,
-    DSetStart
+    DSetStart,
+    DString,
+    String
 }
 
 #[derive(Debug)]
@@ -25,45 +27,87 @@ pub struct Label {
     pub name: String
 }
 
-pub fn tokenize(lines: &Vec<String>) -> Vec<Token>{
-    let words: Vec<String> = lines
-        .iter()
-        .flat_map(|line| line
-                .split_whitespace()
-                .map(|word| word.to_string())
-             )
-        .collect();
-
+pub fn tokenize(lines: &Vec<String>) -> Vec<Token> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut prev_tag: Option<TokenTag> = None;
     let mut labels: Vec<String> = Vec::new();
 
-    for word in words.iter() {
-        let tag: TokenTag = match word {
-            s if s.starts_with('$') => TokenTag::Immediate8,
-            s if s == "LBL" => TokenTag::LabelCreator,
-            s if matches!(prev_tag, Some(TokenTag::LabelCreator)) => {
-                labels.push(s.to_string());
-                TokenTag::Label
-            },
-            s if s == ".setloc" => TokenTag::DSetLocation,
-            s if s == ".start" => TokenTag::DSetStart,
-            s if s.starts_with("@") => TokenTag::Address,
-            s if labels.contains(s) => TokenTag::LabelRef,
-            s if s.starts_with("%") => TokenTag::Register,
-            _ => TokenTag::Opcode
-        };
+    for line in lines {
+        let mut chars = line.chars().peekable();
 
-        tokens.push(Token {
-            tag: tag,
-            word: word.to_string()
-        });
+        while let Some(&c) = chars.peek() {
+            // Skip whitespace
+            if c.is_whitespace() {
+                chars.next();
+                continue;
+            }
 
-        prev_tag = Some(tag);
+            // Handle quoted string
+            if c == '"' {
+                chars.next(); // consume opening quote
+                let mut string_content = String::new();
+
+                // Collect everything until closing quote
+                while let Some(&next_c) = chars.peek() {
+                    chars.next();
+                    if next_c == '"' {
+                        break;
+                    }
+                    string_content.push(next_c);
+                }
+
+                // Re-add quotes for consistency with your existing string check
+                let full_string = format!("\"{}\"", string_content);
+
+                tokens.push(Token {
+                    tag: TokenTag::String,
+                    word: full_string,
+                });
+
+                prev_tag = Some(TokenTag::String);
+                continue;
+            }
+
+            // Otherwise, collect until next whitespace
+            let mut word = String::new();
+            while let Some(&next_c) = chars.peek() {
+                if next_c.is_whitespace() {
+                    break;
+                }
+                word.push(next_c);
+                chars.next();
+            }
+
+            // Classify token (same logic as your original)
+            let tag: TokenTag = match word.as_str() {
+                s if s.starts_with('$') => TokenTag::Immediate8,
+                "LBL" => TokenTag::LabelCreator,
+                s if matches!(prev_tag, Some(TokenTag::LabelCreator)) => {
+                    labels.push(s.to_string());
+                    TokenTag::Label
+                }
+                ".setloc" => TokenTag::DSetLocation,
+                ".start" => TokenTag::DSetStart,
+                ".string" => TokenTag::DString,
+                s if s.starts_with('@') => TokenTag::Address,
+                _ if labels.contains(&word) => TokenTag::LabelRef,
+                s if s.starts_with('%') => TokenTag::Register,
+                s if s.starts_with('"') && s.ends_with('"') => TokenTag::String,
+                _ => TokenTag::Opcode,
+            };
+
+            tokens.push(Token {
+                tag: tag,
+                word: word,
+            });
+
+            prev_tag = Some(tag);
+        }
     }
 
     tokens
 }
+
 
 pub fn process_tokens(tokens: &Vec<Token>) -> Vec<u8> {
     let mut result: Vec<u8> = vec![0u8; 0x10000];
@@ -166,6 +210,28 @@ pub fn process_tokens(tokens: &Vec<Token>) -> Vec<u8> {
                     panic!("Expected a value after '.start', but none found.");
                 }
             }
+
+            TokenTag::DString => {
+                // Next token should be of type TokenTag::String
+                if let Some(next_token) = iter.next() {
+                    if next_token.tag == TokenTag::String {
+                        // Remove the surrounding quotes `"`
+                        let raw = next_token.word.trim_matches('"');
+
+                        // Iterate through each char
+                        for ch in raw.chars() {
+                            // Write its ASCII byte into memory
+                            result[ip as usize] = ch as u8;
+                            ip += 1;
+                        }
+                    } else {
+                        panic!("Expected string literal after .string, got {:?}", next_token.tag);
+                    }
+                } else {
+                    panic!("Expected string literal after .string but found nothing");
+                }
+            },
+
 
             TokenTag::Register => {
                 result[ip as usize] = match token.word.strip_prefix('%').expect(&format!("Couldn't get register: {}", token.word)) {
