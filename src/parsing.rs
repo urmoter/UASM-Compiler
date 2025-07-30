@@ -32,7 +32,7 @@ pub fn tokenize(lines: &Vec<String>) -> Vec<Token> {
     let mut prev_tag: Option<TokenTag> = None;
     let mut labels: Vec<String> = Vec::new();
 
-    for line in lines {
+    for (line_num, line) in lines.iter().enumerate() {
         let mut chars = line.chars().peekable();
 
         while let Some(&c) = chars.peek() {
@@ -42,21 +42,72 @@ pub fn tokenize(lines: &Vec<String>) -> Vec<Token> {
                 continue;
             }
 
-            // Handle quoted string
+            // --- Handle quoted strings ---
             if c == '"' {
                 chars.next(); // consume opening quote
                 let mut string_content = String::new();
+                let mut closed = false;
 
-                // Collect everything until closing quote
                 while let Some(&next_c) = chars.peek() {
                     chars.next();
+
                     if next_c == '"' {
+                        closed = true;
                         break;
                     }
-                    string_content.push(next_c);
+
+                    // Escape handling
+                    if next_c == '\\' {
+                        if let Some(&esc) = chars.peek() {
+                            chars.next();
+                            match esc {
+                                'n' => string_content.push('\n'),
+                                't' => string_content.push('\t'),
+                                '"' => string_content.push('"'),
+                                '\\' => string_content.push('\\'),
+                                'x' => {
+                                    let mut hex_digits = String::new();
+                                    for _ in 0..2 {
+                                        if let Some(&h) = chars.peek() {
+                                            if h.is_ascii_hexdigit() {
+                                                hex_digits.push(h);
+                                                chars.next();
+                                            }
+                                        }
+                                    }
+                                    if let Ok(byte) = u8::from_str_radix(&hex_digits, 16) {
+                                        string_content.push(byte as char);
+                                    } else {
+                                        panic!(
+                                            "Invalid hex escape in string on line {}: \\x{}",
+                                            line_num + 1,
+                                            hex_digits
+                                        );
+                                    }
+                                }
+                                _ => panic!(
+                                    "Invalid escape sequence in string on line {}: \\{}",
+                                    line_num + 1,
+                                    esc
+                                ),
+                            }
+                        } else {
+                            panic!("Unfinished escape sequence in string on line {}", line_num + 1);
+                        }
+                    } else {
+                        string_content.push(next_c);
+                    }
                 }
 
-                // Re-add quotes for consistency with your existing string check
+                if !closed {
+                    panic!(
+                        "Unclosed string literal starting at line {}: \"{}",
+                        line_num + 1,
+                        string_content
+                    );
+                }
+
+                // Wrap in quotes for consistency
                 let full_string = format!("\"{}\"", string_content);
 
                 tokens.push(Token {
@@ -68,7 +119,7 @@ pub fn tokenize(lines: &Vec<String>) -> Vec<Token> {
                 continue;
             }
 
-            // Otherwise, collect until next whitespace
+            // --- Handle normal tokens ---
             let mut word = String::new();
             while let Some(&next_c) = chars.peek() {
                 if next_c.is_whitespace() {
@@ -78,7 +129,6 @@ pub fn tokenize(lines: &Vec<String>) -> Vec<Token> {
                 chars.next();
             }
 
-            // Classify token (same logic as your original)
             let tag: TokenTag = match word.as_str() {
                 s if s.starts_with('$') => TokenTag::Immediate8,
                 "LBL" => TokenTag::LabelCreator,
@@ -107,6 +157,7 @@ pub fn tokenize(lines: &Vec<String>) -> Vec<Token> {
 
     tokens
 }
+
 
 
 pub fn process_tokens(tokens: &Vec<Token>) -> Vec<u8> {
