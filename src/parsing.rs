@@ -12,7 +12,7 @@ pub enum TokenTag {
     DSetLocation,
     DSetStart,
     DString,
-    String
+    String,
 }
 
 #[derive(Debug)]
@@ -142,6 +142,7 @@ pub fn tokenize(lines: &Vec<String>) -> Vec<Token> {
                 s if s.starts_with('@') => TokenTag::Address,
                 _ if labels.contains(&word) => TokenTag::LabelRef,
                 s if s.starts_with('%') => TokenTag::Register,
+                s if matches!(s, "wAB" | "wCD") => TokenTag::Register,
                 s if s.starts_with('"') && s.ends_with('"') => TokenTag::String,
                 _ => TokenTag::Opcode,
             };
@@ -285,14 +286,19 @@ pub fn process_tokens(tokens: &Vec<Token>) -> Vec<u8> {
 
 
             TokenTag::Register => {
-                result[ip as usize] = match token.word.strip_prefix('%').expect(&format!("Couldn't get register: {}", token.word)) {
-                    "A" => 00,
-                    "B" => 01,
-                    "C" => 02,
-                    "D" => 03,
-                    "RL" => 04,
-                    "RH" => 05,
-                    _ => panic!("INVALID REGISTER: {}", token.word)
+                result[ip as usize] = match token.word.as_str() {
+                    "wAB" => 0x04,
+                    "wCD" => 0x05,
+                    s => match s.strip_prefix('%') {
+                        Some("A") => 0x00,
+                        Some("B") => 0x01,
+                        Some("C") => 0x02,
+                        Some("D") => 0x03,
+                        Some("RL") => 0x04,
+                        Some("RH") => 0x05,
+                    
+                        _ => panic!("INVALID REGISTER: {}", token.word),
+                    }
                 };
 
                 // println!("Register {}, wrote 0x{:02X}, at 0x{:04X}", token.word, result[ip as usize], ip);
@@ -416,6 +422,18 @@ pub fn handle_opcode(opcode: &str) -> io::Result<u8> {
 
         "IBPR" => Ok(0x36),
         "LDRO" => Ok(0x37),
+
+        "MOVW" => Ok(0x38),
+        "PSHW" => Ok(0x39),
+        "POPW" => Ok(0x3A),
+        "LDW"  => Ok(0x3B),
+        "STW"  => Ok(0x3C), 
+        "JMPW" => Ok(0x3D),
+        "CALW" => Ok(0x3E),
+        "ADDW" => Ok(0x3F),
+        "INCW" => Ok(0x40),
+        "DECW" => Ok(0x41),
+
 
         _ => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
