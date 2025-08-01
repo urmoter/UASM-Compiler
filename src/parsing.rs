@@ -353,17 +353,21 @@ pub fn parse_address(word: &str) -> Option<u16> {
 
 pub fn handle_opcode(opcode: &str) -> io::Result<u8> {
     match opcode.to_uppercase().as_str() {
-        "NOP" => Ok(0x00),
+        // NOP
+        "NOP"  => Ok(0x00),
 
+        // MOV / CPY
         "MOVA" => Ok(0x01),
         "MOVB" => Ok(0x02),
         "MOVC" => Ok(0x03),
         "MOVD" => Ok(0x04),
         "CPY"  => Ok(0x05),
 
+        // MEMORY
         "STR"  => Ok(0x06),
         "LDR"  => Ok(0x07),
 
+        // MATH
         "ADD"  => Ok(0x08),
         "SUB"  => Ok(0x09),
         "INC"  => Ok(0x0A),
@@ -373,71 +377,90 @@ pub fn handle_opcode(opcode: &str) -> io::Result<u8> {
         "NEG"  => Ok(0x0E),
         "FLP"  => Ok(0x0F),
 
+        // STACK
         "PSHI" => Ok(0x10),
         "PSHR" => Ok(0x11),
         "POP"  => Ok(0x12),
 
+        // JUMPING / CALLS
         "JMP"  => Ok(0x13),
         "CALL" => Ok(0x14),
         "RET"  => Ok(0x15),
         "JZ"   => Ok(0x16),
         "JNZ"  => Ok(0x17),
 
+        // HALT
         "HLT"  => Ok(0x18),
 
-        "JU"   => Ok(0x19),
-        "JNU"  => Ok(0x1A),
+        // LESS
+        "JL"   => Ok(0x19),
+        "JNL"  => Ok(0x1A),
 
-        "SETU" => Ok(0x1B),
-        "CLRU" => Ok(0x1C),
+        // STATUS FLAGS
+        "SETL" => Ok(0x1B),
+        "CLRL" => Ok(0x1C),
         "SETZ" => Ok(0x1D),
         "CLRZ" => Ok(0x1E),
         "SETN" => Ok(0x1F),
         "CLRN" => Ok(0x20),
-        "SETP" => Ok(0x21),
-        "CLRP" => Ok(0x22),
+        "SETE" => Ok(0x21),
+        "CLRE" => Ok(0x22),
         "SETC" => Ok(0x23),
         "CLRC" => Ok(0x24),
 
+        // LOGIC
         "AND"  => Ok(0x25),
         "OR"   => Ok(0x26),
         "XOR"  => Ok(0x27),
         "NOT"  => Ok(0x28),
 
+        // EQUAL / CONDITIONAL
         "JE"   => Ok(0x29),
         "JNE"  => Ok(0x2A),
-        "JG"   => Ok(0x2B),
-        "JL"   => Ok(0x2C),
 
+        // LEA (Load Effective Address)
+        "LEA"  => Ok(0x2C),
+
+        // PRINT
         "PRNI" => Ok(0x2D),
         "PRNR" => Ok(0x2E),
         "ENPR" => Ok(0x2F),
 
+        // CARRY CONDITIONAL
         "JC"   => Ok(0x30),
         "JNC"  => Ok(0x31),
+
+        // NEGATIVE CONDITIONAL
         "JN"   => Ok(0x32),
         "JNN"  => Ok(0x33),
-        "JP"   => Ok(0x34),
-        "JNP"  => Ok(0x35),
 
+        // GREATER CONDITIONAL
+        "JG"   => Ok(0x34),
+        "JNGS" => Ok(0x35),
+
+        // BP RELATIVE
         "IBPR" => Ok(0x36),
+
+        // LOAD WITH OFFSET
         "LDRO" => Ok(0x37),
 
+        // WIDE (16-bit) OPERATIONS
         "MOVW" => Ok(0x38),
         "PSHW" => Ok(0x39),
         "POPW" => Ok(0x3A),
         "LDW"  => Ok(0x3B),
-        "STW"  => Ok(0x3C), 
+        "STW"  => Ok(0x3C),
         "JMPW" => Ok(0x3D),
         "CALW" => Ok(0x3E),
         "ADDW" => Ok(0x3F),
         "INCW" => Ok(0x40),
         "DECW" => Ok(0x41),
 
+        // COMPARE / FLAGS
+        "CMP"  => Ok(0x42),
+        "SETG" => Ok(0x43),
+        "CLRG" => Ok(0x44),
 
-        _ => Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "Invalid opcode",
-        )),
+        _ => Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid opcode")),
     }
 }
